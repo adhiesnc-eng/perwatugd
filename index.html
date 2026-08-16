@@ -75,7 +75,7 @@
         .main-scroll::-webkit-scrollbar { display: none; }
 
         #view-home, #view-rekap, #view-profil,
-        #modal-operan, #modal-scanner, #modal-success-presence {
+        #modal-operan, #modal-scanner, #modal-success-presence, #modal-logout {
             transform: translateZ(0);
             will-change: transform, opacity;
         }
@@ -483,6 +483,34 @@
     <button onclick="location.reload()" class="mt-10 w-full max-w-xs bg-slate-900 dark:bg-teal-600 text-white py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 shadow-md transition-all">Selesai</button>
 </div>
 
+<!-- MODAL LOGOUT KONFIRMASI MODERN GLASSMORPHISM -->
+<div id="modal-logout" class="fixed inset-0 z-[8500] hidden flex items-center justify-center p-6 bg-slate-950/70 backdrop-blur-md transition-opacity duration-200 opacity-0 pointer-events-none">
+    <div id="modal-logout-card" class="bg-white/95 dark:bg-gray-900/95 glass-premium w-full max-w-xs rounded-[2.2rem] p-6 text-center shadow-2xl border border-slate-200/60 dark:border-white/10 transform scale-95 transition-all duration-200 space-y-5">
+        <div class="relative w-16 h-16 mx-auto flex items-center justify-center">
+            <div class="absolute inset-0 bg-rose-500/20 rounded-2xl animate-ping opacity-60"></div>
+            <div class="w-16 h-16 bg-rose-500/10 dark:bg-rose-500/20 text-rose-500 rounded-2xl flex items-center justify-center text-2xl border border-rose-500/30 shadow-inner relative z-10">
+                🚪
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Keluar dari Sesi?</h3>
+            <p class="text-[9px] font-bold text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                Sesi akun perawat aktif akan diakhiri di perangkat ini. Anda dapat masuk kembali kapan saja.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-1">
+            <button onclick="closeLogoutModal()" class="w-full py-3.5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 font-extrabold text-[9px] uppercase tracking-wider bg-slate-100/80 dark:bg-gray-800/80 hover:bg-slate-200 active:scale-95 transition-all">
+                Batal
+            </button>
+            <button onclick="confirmLogout()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-black text-[9px] uppercase tracking-wider shadow-lg shadow-rose-500/25 active:scale-95 transition-all">
+                Ya, Keluar
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Alert Pop-up -->
 <div id="alert-box" class="fixed top-6 left-6 right-6 z-[7000] translate-y-[-150%] opacity-0 pointer-events-none">
     <div class="bg-white/95 dark:bg-gray-900/95 shadow-2xl p-4 rounded-2xl flex items-center gap-4 border border-slate-200/60 dark:border-white/10 backdrop-blur-md">
@@ -787,11 +815,42 @@
         window.renderDashboard();
     };
 
+    // MODAL LOGOUT LOGIC
     window.logout = function() { 
-        if(!confirm("Logout dari sesi ini?")) return;
-        state.user = null; localStorage.removeItem('nurse_session_name'); 
+        window.triggerHaptic(20);
+        const modal = document.getElementById('modal-logout');
+        const card = document.getElementById('modal-logout-card');
+        
+        modal.classList.remove('hidden', 'pointer-events-none');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            card.classList.remove('scale-95');
+            card.classList.add('scale-100');
+        }, 10);
+    };
+
+    window.closeLogoutModal = function() {
+        window.triggerHaptic(10);
+        const modal = document.getElementById('modal-logout');
+        const card = document.getElementById('modal-logout-card');
+        
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        card.classList.remove('scale-100');
+        card.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 200);
+    };
+
+    window.confirmLogout = function() {
+        window.closeLogoutModal();
+        window.triggerHaptic([30, 50, 30]);
+        
+        state.user = null; 
+        localStorage.removeItem('nurse_session_name'); 
+        
         document.getElementById('user-nip').innerText = "-"; 
         document.getElementById('nurse-profile-wrapper').innerHTML = `<span id="nurse-initial" class="text-slate-400 dark:text-teal-400 text-3xl font-black">?</span>`;
+        
+        window.showAlert("Sesi Berakhir", "Berhasil keluar dari akun", "success");
         window.renderDashboard();
         window.showView('home');
     };
