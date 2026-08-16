@@ -491,12 +491,12 @@
     </div>
 </div>
 
-<!-- FIREBASE SDK & APP LOGIC -->
+<!-- FIREBASE SDK & APP LOGIC SCRIPT (ES MODULE) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Inisialisasi Firebase Database
+    // Inisialisasi Firebase Realtime Database
     const app = initializeApp(CONFIG.FIREBASE);
     const db = getDatabase(app);
 
@@ -685,6 +685,7 @@
         }
     };
 
+    // SIMPAN OPERAN PASIEN KE FIREBASE
     window.saveOperanData = async function() {
         const textVal = document.getElementById('operan-text-input').value.trim();
         if(state.operanType === 'lanjut' && !textVal) {
@@ -734,13 +735,12 @@
         authorEl.innerText = `Oleh: ${data.author} (Shift ${data.shift})`;
     };
 
-    // SINKRONISASI REALTIME FIREBASE
+    // SINKRONISASI REALTIME FIREBASE KE PWA
     function setupFirebaseListeners() {
         const rootRef = ref(db);
         onValue(rootRef, (snapshot) => {
             const val = snapshot.val() || {};
             
-            // Konversi logs dari Object / Array
             let logsArray = [];
             if (val.logs) {
                 if (Array.isArray(val.logs)) {
@@ -750,7 +750,6 @@
                 }
             }
 
-            // Konversi Officers dari string array / object
             let officersList = [];
             if (val.officers) {
                 if (Array.isArray(val.officers)) {
@@ -919,8 +918,8 @@
             const wrapper = document.getElementById('nurse-profile-wrapper');
             if(wrapper) wrapper.innerHTML = window.getProfileImageHTML(state.user);
             
-            const serverVersion = (state.data.config && state.data.config.version) ? state.data.config.version : "Firebase";
-            document.getElementById('app-version-badge').innerText = `v${serverVersion}`;
+            const serverVersion = (state.data.config && state.data.config.version) ? state.data.config.version : "v1.5.0";
+            document.getElementById('app-version-badge').innerText = `${serverVersion}`;
             
             const [d, m, y] = logicalDate.split('/');
             const monthKey = `/${m}/${y}`;
@@ -1001,7 +1000,6 @@
                 const monthStr = (month+1).toString().padStart(2,'0');
                 const dateStr = `${dayStr}/${monthStr}/${year}`;
                 
-                // Cari log yang cocok (toleran terhadap spasi dan format slash/strip)
                 const log = state.data.logs.find(l => {
                     if (!l || !l.name || !l.date) return false;
                     const cleanLogName = l.name.trim().toLowerCase();
@@ -1079,6 +1077,7 @@
         } catch (e) { window.showAlert("Error", "Gagal akses kamera", "error"); window.closeScanner(); }
     };
 
+    // SIMPAN SCAN KE FIREBASE & FONNTE WA
     window.processScan = async function() {
         document.getElementById('loading-overlay').classList.remove('hidden');
         const payload = { 
@@ -1093,30 +1092,14 @@
             const logsRef = ref(db, 'logs');
             await push(logsRef, payload);
 
-            // 2. Kirim Notifikasi WhatsApp Fonnte
-            if (CONFIG.FONNTE_TOKEN && CONFIG.NOMOR_NOTIFICATION_CENTER) {
-                let emojiShift = "☀️";
-                if (payload.shift === "Sore" || payload.shift === "Siang") emojiShift = "⛅";
-                if (payload.shift === "Malam") emojiShift = "🌙";
-
-                const pesanWA = `*✅ PRESENSI BERHASIL DICATAT*\n` +
-                                `----------------------------------------\n\n` +
-                                `👤 *Nama:* ${payload.name}\n` +
-                                `📅 *Tanggal:* ${payload.date}\n` +
-                                `⏰ *Jam Scan:* ${payload.time} WITA\n` +
-                                `${emojiShift} *Shift:* ${payload.shift}\n\n` +
-                                `----------------------------------------\n` +
-                                `Sistem Presensi UGD Puskesmas Sampanahan.`;
-
-                fetch("https://api.fonnte.com/send", {
-                    method: "POST",
-                    headers: { "Authorization": CONFIG.FONNTE_TOKEN },
-                    body: new URLSearchParams({
-                        target: CONFIG.NOMOR_NOTIFICATION_CENTER,
-                        message: pesanWA,
-                        countryCode: "62"
-                    })
-                }).catch(e => console.error("WA Gateway:", e));
+            // 2. Simpan juga ke Google Sheet sebagai arsip (opsional via fetch POST)
+            if (CONFIG.WEB_APP_URL) {
+                fetch(CONFIG.WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'saveScan', payload })
+                }).catch(e => console.error("Sheet backup:", e));
             }
 
             window.playSfx('success');
