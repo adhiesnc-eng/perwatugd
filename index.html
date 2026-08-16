@@ -10,7 +10,7 @@
     <!-- Tautan Manifest PWA -->
     <link rel="manifest" href="./manifest.json">
     
-    <!-- Memuat database konfigurasi -->
+    <!-- Database Konfigurasi -->
     <script src="./db.js"></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -210,7 +210,7 @@
             <select id="rekap-filter-shift" onchange="renderRekap()" class="w-full bg-white dark:bg-gray-900 border border-slate-200/60 dark:border-white/5 p-3 rounded-xl text-[10px] font-black outline-none dark:text-white shadow-sm appearance-none text-center">
                 <option value="">Semua Shift</option>
                 <option value="Pagi">Pagi (P)</option>
-                <option value="Sore">Sore (S)</option>
+                <option value="Siang">Siang (S)</option>
                 <option value="Malam">Malam (M)</option>
             </select>
         </div>
@@ -594,7 +594,7 @@
         const now = new Date();
         const shiftTimes = [
             { h: 8, m: 0, name: 'Pagi' },
-            { h: 14, m: 0, name: 'Sore' },
+            { h: 14, m: 0, name: 'Siang' },
             { h: 20, m: 0, name: 'Malam' }
         ];
 
@@ -869,10 +869,11 @@
         }
     };
 
+    // LOGIKA PENENTUAN SHIFT OTOMATIS (PAGI, SIANG, MALAM)
     window.getShiftInfo = function() {
         const hr = new Date().getHours();
         if (hr >= 8 && hr < 14) return { label: 'Pagi', code: 'P' };
-        if (hr >= 14 && hr < 20) return { label: 'Sore', code: 'S' };
+        if (hr >= 14 && hr < 20) return { label: 'Siang', code: 'S' };
         return { label: 'Malam', code: 'M' };
     };
 
@@ -941,7 +942,7 @@
         const formatShiftName = (code) => {
             if (!code || code === '' || code === '-' || code === 'L' || code === 'OFF') return 'Lepas Jaga';
             if (code === 'P') return 'Pagi (P)';
-            if (code === 'S') return 'Sore (S)';
+            if (code === 'S') return 'Siang (S)';
             if (code === 'M') return 'Malam (M)';
             if (code === 'POLI') return 'Dinas Poli';
             return code;
@@ -986,7 +987,7 @@
             document.getElementById('stat-total-life').innerText = monthlyLogs.length;
             const statusBadge = document.getElementById('user-jaga-status');
             const todayLogs = state.data.logs.filter(l => l.name === state.user && l.date === logicalDate);
-            if(todayLogs.some(l => l.shift === info.label || (info.label === 'Sore' && l.shift === 'Siang'))) {
+            if(todayLogs.some(l => l.shift === info.label || (info.label === 'Siang' && (l.shift === 'Siang' || l.shift === 'Sore')))) {
                 statusBadge.innerText = "Sedang Jaga";
                 statusBadge.className = "px-4 py-1.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-[8px] font-black rounded-full uppercase tracking-widest animate-pulse shadow-md shadow-teal-500/10";
                 statusBadge.classList.remove('hidden');
@@ -1000,7 +1001,7 @@
         const lToday = state.data.logs.filter(l => l.date === logicalDate).sort((a, b) => b.time.localeCompare(a.time));
         
         document.getElementById('live-log-container').innerHTML = lToday.length ? lToday.map(l => {
-            const isCurrentShiftActive = (l.shift === info.label || (info.label === 'Sore' && l.shift === 'Siang'));
+            const isCurrentShiftActive = (l.shift === info.label || (info.label === 'Siang' && (l.shift === 'Siang' || l.shift === 'Sore')));
             const statusText = isCurrentShiftActive ? "Jaga Active" : "Selesai";
             const badgeClass = isCurrentShiftActive 
                 ? "bg-teal-500 text-white shadow-sm" 
@@ -1010,6 +1011,7 @@
                 : "border-l-4 border-slate-300 dark:border-gray-700";
 
             const profileImgHtml = window.getProfileImageHTML(l.name);
+            const displayShift = l.shift === 'Sore' ? 'Siang' : l.shift;
 
             return `
             <div class="bg-white/80 dark:bg-gray-950/40 border border-slate-200/50 dark:border-white/5 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-sm ${sideIndicator} transition-all">
@@ -1019,7 +1021,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-[11px] font-extrabold text-slate-800 dark:text-gray-200 uppercase tracking-wide truncate">${l.name}</p>
-                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${l.time} WITA • Shift ${l.shift}</p>
+                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${l.time} WITA • Shift ${displayShift}</p>
                     </div>
                 </div>
                 <div class="${badgeClass} px-3 py-1.5 rounded-xl text-[7px] font-black uppercase tracking-wider flex-shrink-0">${statusText}</div>
@@ -1070,8 +1072,7 @@
                 let char = '-', css = 'opacity-20';
                 
                 if(log) {
-                    let shiftName = log.shift;
-                    if(shiftName === 'Siang') shiftName = 'Sore';
+                    let shiftName = (log.shift === 'Sore' || log.shift === 'Siang') ? 'Siang' : log.shift;
                     
                     if(!filterShift || shiftName === filterShift) {
                         char = shiftName.charAt(0);
@@ -1096,7 +1097,7 @@
                     });
 
                     if(log) {
-                        let shiftName = log.shift === 'Siang' ? 'Sore' : log.shift;
+                        let shiftName = (log.shift === 'Sore' || log.shift === 'Siang') ? 'Siang' : log.shift;
                         if(!filterShift || shiftName === filterShift) {
                             dailyTotals[d]++;
                             grandTotal++;
@@ -1115,7 +1116,7 @@
     window.initiateScan = async function() {
         if (!state.user) return window.showAlert("Akses Ditolak", "Pilih akun perawat dulu", "error");
         const shift = window.getShiftInfo(); const lDate = window.getLogicalDate();
-        if (state.data.logs.some(l => l.name === state.user && l.date === lDate && (l.shift === shift.label || (shift.label === 'Sore' && l.shift === 'Siang')))) {
+        if (state.data.logs.some(l => l.name === state.user && l.date === lDate && (l.shift === shift.label || (shift.label === 'Siang' && (l.shift === 'Siang' || l.shift === 'Sore'))))) {
             return window.showAlert("Info", `Shift ${shift.label} sudah diabsen`, "error");
         }
         document.getElementById('modal-scanner').classList.remove('hidden');
@@ -1139,19 +1140,26 @@
     // SIMPAN SCAN KE FIREBASE & FONNTE WA
     window.processScan = async function() {
         document.getElementById('loading-overlay').classList.remove('hidden');
+        const shiftLabel = window.getShiftInfo().label;
+        const logicalDate = window.getLogicalDate();
         const payload = { 
             name: state.user, 
-            date: window.getLogicalDate(), 
-            shift: window.getShiftInfo().label, 
+            date: logicalDate, 
+            shift: shiftLabel, 
             time: window.getCurrentTimeString() 
         };
 
         try {
-            // 1. Simpan ke Firebase Realtime Database
-            const logsRef = ref(db, 'logs');
-            await push(logsRef, payload);
+            // 1. Simpan ke Firebase Realtime Database dengan Kunci Deterministik
+            const cleanNameKey = state.user.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+            const cleanDateKey = logicalDate.replace(/[^0-9]/g, "");
+            const cleanShiftKey = shiftLabel.toUpperCase();
+            const deterministicLogKey = `log_${cleanNameKey}_${cleanDateKey}_${cleanShiftKey}`;
 
-            // 2. Simpan juga ke Google Sheet sebagai arsip (opsional via fetch POST)
+            const specificLogRef = ref(db, `logs/${deterministicLogKey}`);
+            await set(specificLogRef, payload);
+
+            // 2. Simpan juga ke Google Sheet sebagai arsip
             if (CONFIG.WEB_APP_URL) {
                 fetch(CONFIG.WEB_APP_URL, {
                     method: 'POST',
