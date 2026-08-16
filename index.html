@@ -10,7 +10,7 @@
     <!-- Tautan Manifest PWA -->
     <link rel="manifest" href="./manifest.json">
     
-    <!-- Memuat konfigurasi database & API -->
+    <!-- Memuat database konfigurasi -->
     <script src="./db.js"></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -491,7 +491,7 @@
     </div>
 </div>
 
-<!-- FIREBASE SDK & APP LOGIC -->
+<!-- FIREBASE SDK & APP LOGIC SCRIPT (ES MODULE) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -1058,6 +1058,7 @@
         } catch (e) { window.showAlert("Error", "Gagal akses kamera", "error"); window.closeScanner(); }
     };
 
+    // SIMPAN KE FIREBASE & KIRIM NOTIFIKASI FONNTE WA
     window.processScan = async function() {
         document.getElementById('loading-overlay').classList.remove('hidden');
         const payload = { 
