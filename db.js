@@ -2,9 +2,9 @@
 // 🔥 KONFIGURASI SISTEM PRESENSI UGD PUSKESMAS SAMPANAHAN
 // =================================================================
 const CONFIG = {
-    VERSION: "v1.4.3",
+    VERSION: "v1.5.0",
     // URL Web App Google Apps Script terbaru
-    WEB_APP_URL: "https://script.google.com/macros/s/AKfycbyKSlGKfAiQX1jWHNrtsDjYF6UXtd2KV9Opz3lVdV8jYxqh_nVc72TJ1oRD1bP8J9iN7w/exec",
+    WEB_APP_URL: "https://script.google.com/macros/s/AKfycbw26pc9mARIAS7-kNHtt4VxZmCZZQ_ayXrhc2FOv76DCYCi78OrRZKPRXceWjxk45wX/exec",
     DEFAULT_QR: "UGD-SAMPANAHAN-SCAN",
     MONTHS: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
     
