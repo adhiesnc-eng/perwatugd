@@ -216,7 +216,7 @@
         </div>
     </div>
 
-    <!-- Scroll Content -->
+    <!-- Scroll Container -->
     <div class="main-scroll bg-mesh-premium" id="scroll-root">
         <!-- VIEW BERANDA -->
         <main id="view-home" class="px-6 mt-6 space-y-6">
@@ -491,7 +491,7 @@
     </div>
 </div>
 
-<!-- FIREBASE SDK & APP LOGIC SCRIPT (ES MODULE) -->
+<!-- FIREBASE SDK & APP LOGIC -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -734,11 +734,13 @@
         authorEl.innerText = `Oleh: ${data.author} (Shift ${data.shift})`;
     };
 
+    // SINKRONISASI REALTIME FIREBASE
     function setupFirebaseListeners() {
         const rootRef = ref(db);
         onValue(rootRef, (snapshot) => {
             const val = snapshot.val() || {};
             
+            // Konversi logs dari Object / Array
             let logsArray = [];
             if (val.logs) {
                 if (Array.isArray(val.logs)) {
@@ -748,6 +750,7 @@
                 }
             }
 
+            // Konversi Officers dari string array / object
             let officersList = [];
             if (val.officers) {
                 if (Array.isArray(val.officers)) {
@@ -925,7 +928,7 @@
             document.getElementById('stat-total-life').innerText = monthlyLogs.length;
             const statusBadge = document.getElementById('user-jaga-status');
             const todayLogs = state.data.logs.filter(l => l.name === state.user && l.date === logicalDate);
-            if(todayLogs.some(l => l.shift === info.label)) {
+            if(todayLogs.some(l => l.shift === info.label || (info.label === 'Sore' && l.shift === 'Siang'))) {
                 statusBadge.innerText = "Sedang Jaga";
                 statusBadge.className = "px-4 py-1.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-[8px] font-black rounded-full uppercase tracking-widest animate-pulse shadow-md shadow-teal-500/10";
                 statusBadge.classList.remove('hidden');
@@ -939,7 +942,7 @@
         const lToday = state.data.logs.filter(l => l.date === logicalDate).sort((a, b) => b.time.localeCompare(a.time));
         
         document.getElementById('live-log-container').innerHTML = lToday.length ? lToday.map(l => {
-            const isCurrentShiftActive = (l.shift === info.label);
+            const isCurrentShiftActive = (l.shift === info.label || (info.label === 'Sore' && l.shift === 'Siang'));
             const statusText = isCurrentShiftActive ? "Jaga Active" : "Selesai";
             const badgeClass = isCurrentShiftActive 
                 ? "bg-teal-500 text-white shadow-sm" 
@@ -968,10 +971,10 @@
 
     window.renderRekap = function() {
         const sel = document.getElementById('rekap-select-month');
-        if(!sel.value) return;
+        if(!sel || !sel.value) return;
         const [month, year] = sel.value.split('-').map(Number);
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const search = document.getElementById('rekap-search').value.toLowerCase();
+        const search = (document.getElementById('rekap-search').value || '').toLowerCase().trim();
         const filterShift = document.getElementById('rekap-filter-shift').value;
         const now = new Date();
         const isCurrentMonth = (now.getMonth() === month && now.getFullYear() === year);
@@ -988,14 +991,25 @@
         const filteredOfficers = state.data.officers.filter(o => o.name.toLowerCase().includes(search)).sort((a,b) => a.name.localeCompare(b.name));
         
         filteredOfficers.forEach(officer => {
-            const name = officer.name;
+            const rawName = officer.name.trim();
             let rowTotal = 0;
             let cells = "";
             let hasDataInRow = false;
             
             for(let d=1; d<=daysInMonth; d++) {
-                const dateStr = `${d.toString().padStart(2,'0')}/${(month+1).toString().padStart(2,'0')}/${year}`;
-                const log = state.data.logs.find(l => l.name === name && l.date === dateStr);
+                const dayStr = d.toString().padStart(2,'0');
+                const monthStr = (month+1).toString().padStart(2,'0');
+                const dateStr = `${dayStr}/${monthStr}/${year}`;
+                
+                // Cari log yang cocok (toleran terhadap spasi dan format slash/strip)
+                const log = state.data.logs.find(l => {
+                    if (!l || !l.name || !l.date) return false;
+                    const cleanLogName = l.name.trim().toLowerCase();
+                    const cleanTargetName = rawName.toLowerCase();
+                    const cleanDate = l.date.trim().replace(/-/g, '/');
+                    return (cleanLogName === cleanTargetName || cleanLogName.includes(cleanTargetName)) && cleanDate === dateStr;
+                });
+
                 let char = '-', css = 'opacity-20';
                 
                 if(log) {
@@ -1013,10 +1027,17 @@
             }
             
             if(!filterShift || hasDataInRow) {
-                html += `<tr><td class="sticky-left uppercase font-black text-[9px] leading-tight break-words max-w-[120px]">${name}</td>${cells}<td class="sticky-right">${rowTotal}</td></tr>`;
+                html += `<tr><td class="sticky-left uppercase font-black text-[9px] leading-tight break-words max-w-[120px]">${rawName}</td>${cells}<td class="sticky-right">${rowTotal}</td></tr>`;
                 for(let d=1; d<=daysInMonth; d++) {
                     const dateStr = `${d.toString().padStart(2,'0')}/${(month+1).toString().padStart(2,'0')}/${year}`;
-                    const log = state.data.logs.find(l => l.name === name && l.date === dateStr);
+                    const log = state.data.logs.find(l => {
+                        if (!l || !l.name || !l.date) return false;
+                        const cleanLogName = l.name.trim().toLowerCase();
+                        const cleanTargetName = rawName.toLowerCase();
+                        const cleanDate = l.date.trim().replace(/-/g, '/');
+                        return (cleanLogName === cleanTargetName || cleanLogName.includes(cleanTargetName)) && cleanDate === dateStr;
+                    });
+
                     if(log) {
                         let shiftName = log.shift === 'Siang' ? 'Sore' : log.shift;
                         if(!filterShift || shiftName === filterShift) {
@@ -1058,7 +1079,6 @@
         } catch (e) { window.showAlert("Error", "Gagal akses kamera", "error"); window.closeScanner(); }
     };
 
-    // SIMPAN KE FIREBASE & KIRIM NOTIFIKASI FONNTE WA
     window.processScan = async function() {
         document.getElementById('loading-overlay').classList.remove('hidden');
         const payload = { 
